@@ -209,6 +209,9 @@ typedef void (SlaveCallback)(int node, int param);
 
 #define REQ_MAXIMUM 63
 
+/** Total number of action numbers. */
+#define REQ_MAXIMUM 61
+
 /*@}*/
 
 /** \name Slave Callbacks
@@ -345,6 +348,7 @@ static SlaveCallback *slave_callbacks[] = {
   mpi_send_vs_relative_slave,	     /* 59: REQ_SET_VS_RELATIVE */
   mpi_bcast_max_mu_slave,            /* 60: REQ_MAX_MU */
   mpi_send_scattering_length_slave,              /* 61: REQ_SET_SCATTERING_LENGTH */
+  mpi_bcast_max_mu_slave           /* 60: REQ_MAX_MU */
 };
 
 /** Names to be printed when communication debugging is on. */
@@ -420,8 +424,7 @@ char *names[] = {
   "REQ_GET_FLUID_POP" /* 58 */
   "SET_VS_RELATIVE", /* 59 */
   "REQ_MAX_MU", /* 60 */
-  "SET_VS_RELATIVE", /* 61 */
-  "SET_SCATTERING_LENGTH",       /* 62 */
+  "SET_SCATTERING_LENGTH",       /* 61 */
 };
 
 /** the requests are compiled here. So after a crash you get the last issued request */
