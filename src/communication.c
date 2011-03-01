@@ -207,10 +207,9 @@ typedef void (SlaveCallback)(int node, int param);
 /** Action number for \ref mpi_send_scattering_length. */
 #define REQ_SET_SCATTERING_LENGTH     61
 
-#define REQ_MAXIMUM 63
-
 /** Total number of action numbers. */
-#define REQ_MAXIMUM 61
+#define REQ_MAXIMUM 62
+
 
 /*@}*/
 
