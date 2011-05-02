@@ -175,10 +175,16 @@ MDINLINE int map_lattice_to_position(Lattice *lattice, int *ind, int *grid) {
  * \param delta      distance fraction of pos from the surrounding
  *                   elementary cell, 6 directions (Output)
  */
-MDINLINE void map_position_to_lattice(Lattice *lattice, const double pos[3], index_t node_index[8], double delta[6]) {
+MDINLINE void map_position_to_lattice(Lattice *lattice, const double _pos[3], index_t node_index[8], double delta[6]) {
 
   int dir,ind[3] ;
   double lpos, rel;
+  /// WORKAROUND FOR VIRTUAL SITES!
+  double pos[3];
+  pos[0]=fmod(_pos[0]+100000*box_l[0], box_l[0]);
+  pos[1]=fmod(_pos[1]+100000*box_l[1], box_l[1]);
+  pos[2]=fmod(_pos[2]+100000*box_l[2], box_l[2]);
+  /// END WORKAROUND!
 
   /* determine the elementary lattice cell containing the particle
      and the relative position of the particle in this cell */ 
