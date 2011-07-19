@@ -62,11 +62,12 @@ double my_right[3]    = {1, 1, 1};
 
 void setup_node_grid()
 {
-  if (node_grid[0] < 0) {
+  printf("%d setup node grid %d %d %d\n", this_node, node_grid[0], node_grid[1], node_grid[2]);
+  if (node_grid[0] < 0 && this_node == 0) {
     /* auto setup, grid not set */
     calc_3d_grid(n_nodes,node_grid);
 
-    mpi_bcast_parameter(FIELD_NODEGRID);
+//    mpi_bcast_parameter(FIELD_NODEGRID);
   }
 }
 

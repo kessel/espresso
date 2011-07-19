@@ -69,7 +69,6 @@ int n_nodes = -1;
 /**********************************************
  * slave callbacks.
  **********************************************/
-typedef void (SlaveCallback)(int node, int param);
 
 // if you want to add a callback, add it here, and here only
 #define CALLBACK_LIST \
@@ -142,11 +141,12 @@ CALLBACK_LIST
 // create the list of callbacks
 #undef CB
 #define CB(name) name,
-static SlaveCallback *slave_callbacks[] = {
+SlaveCallback *slave_callbacks[] = {
   CALLBACK_LIST
 };
 
 const int N_CALLBACKS = sizeof(slave_callbacks)/sizeof(SlaveCallback*);
+request_handler_type request_handler;
 
 // create the list of names
 #undef CB
@@ -178,6 +178,24 @@ void mpi_core(MPI_Comm *comm, int *errcode,...) {
 }
 #endif
 
+void mpi_bcast_request_handler(int* request) {
+  printf("%d: reqest %d made\n", this_node, request[0]);
+  MPI_Bcast(request, 3, MPI_INT, 0, MPI_COMM_WORLD);
+}
+
+void set_reqest_handler(request_handler_type _request_handler) {
+  printf("Setting request handler.\n");
+  request_handler = _request_handler;
+}
+
+void set_this_node(int _this_node) {
+  this_node = _this_node;
+}
+
+void set_n_nodes(int _n_nodes) {
+  n_nodes = _n_nodes;
+}
+
 void mpi_init(int *argc, char ***argv)
 {
 #ifdef MPI_CORE
@@ -192,7 +210,9 @@ void mpi_init(int *argc, char ***argv)
   MPI_Errhandler_create((MPI_Handler_function *)mpi_core, &mpi_errh);
   MPI_Errhandler_set(MPI_COMM_WORLD, mpi_errh);
 #endif
+  request_handler = mpi_bcast_request_handler;
 }
+
 
 static void mpi_call(SlaveCallback cb, int node, int param) {
   // find req number in callback array
@@ -215,7 +235,8 @@ static void mpi_call(SlaveCallback cb, int node, int param) {
 #ifdef ASYNC_BARRIER
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
-  MPI_Bcast(request, 3, MPI_INT, 0, MPI_COMM_WORLD);
+  (*request_handler)(request);
+//  mpi_bcast_request_handler(request);
 }
 
 /**************** REQ_TERM ************/

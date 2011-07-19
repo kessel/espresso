@@ -25,7 +25,7 @@ info:
 libespresso_main.so: espresso_bin/src/libEspresso.a errexit.o 
 	@if [ -e espresso_bin/src/libespressobf_a-blockfile.o ]; then rm ./espresso_bin/src/libespressobf_a-blockfile.o; fi
 	@if [ -e ./espresso_bin/src/lb_boundaries_gpu.o ]; then rm ./espresso_bin/src/lb_boundaries_gpu.o; fi
-	gcc -shared -o libespresso_main.so ./espresso_bin/src/*.o ./espresso_bin/Espresso-scriptsdir.o ./errexit.o
+	gcc -shared -o libespresso_main.so ./espresso_bin/src/*.o ./espresso_bin/Espresso-scriptsdir.o ./errexit.o -lmpi -lopen-rte
 
 errexit.o:
 	gcc -c -shared  -fPIC errexit.c

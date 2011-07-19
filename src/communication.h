@@ -68,6 +68,15 @@ extern int this_node;
 /** The total number of nodes. */
 extern int n_nodes;
 /*@}*/
+typedef void (*request_handler_type)(int* req);
+void set_reqest_handler(request_handler_type _request_handler);
+void set_this_node(int _this_node); 
+void set_n_nodes(int _n_nodes); 
+typedef void (SlaveCallback)(int node, int param);
+extern SlaveCallback *slave_callbacks[];
+
+extern request_handler_type request_handler;
+extern * names[];
 
 /**************************************************
  * for every procedure requesting a MPI negotiation
