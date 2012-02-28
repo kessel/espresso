@@ -346,6 +346,22 @@ int tclcommand_observable_density_profile(Tcl_Interp* interp, int argc, char** a
   return TCL_OK;
 }
 
+int tclcommand_observable_untwisted_density_profile(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs){
+  int temp;
+  profile_data* pdata;
+  obs->fun = &observable_untwisted_density_profile;
+  if (! tclcommand_parse_profile(interp, argc-1, argv+1, &temp, &obs->n, &pdata) == TCL_OK ) 
+    return TCL_ERROR;
+  if (pdata->id_list==0) {
+    Tcl_AppendResult(interp, "Error in radial_profile: particle ids/types not specified\n" , (char *)NULL);
+    return TCL_ERROR;
+  }
+  obs->args=(void*)pdata;
+  obs->n=pdata->xbins*pdata->ybins*pdata->zbins;
+  *change=1+temp;
+  return TCL_OK;
+}
+
 int tclcommand_observable_lb_velocity_profile(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs){
 #ifndef LB
   return TCL_ERROR;
@@ -820,6 +836,7 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
   //  REGISTER_OBSERVABLE(obs_nothing, tclcommand_observable_obs_nothing,id);
   //  REGISTER_OBSERVABLE(flux_profile, tclcommand_observable_flux_profile,id);
     REGISTER_OBSERVABLE(density_profile, tclcommand_observable_density_profile,id);
+    REGISTER_OBSERVABLE(untwisted_density_profile, tclcommand_observable_untwisted_density_profile,id);
     REGISTER_OBSERVABLE(lb_velocity_profile, tclcommand_observable_lb_velocity_profile,id);
     REGISTER_OBSERVABLE(radial_density_profile, tclcommand_observable_radial_density_profile,id);
     REGISTER_OBSERVABLE(radial_flux_density_profile, tclcommand_observable_radial_flux_density_profile,id);
@@ -1260,7 +1277,8 @@ int tclcommand_observable_print_formatted(Tcl_Interp* interp, int argc, char** a
   } else if (obs->fun == (&observable_lb_velocity_profile)) {
     return tclcommand_observable_print_profile_formatted(interp, argc, argv, change, obs, values, 3, 0);
 #endif
-  } else if (obs->fun == (&observable_density_profile)) {
+  } else if (obs->fun == (&observable_density_profile) || 
+             obs->fun == (&observable_untwisted_density_profile)) {
     return tclcommand_observable_print_profile_formatted(interp, argc, argv, change, obs, values, 1, 1);
 #ifdef LB
   } else if (obs->fun == (&observable_lb_radial_velocity_profile)) {

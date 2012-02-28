@@ -235,6 +235,62 @@ int observable_density_profile(void* pdata_, double* A, unsigned int n_A) {
   return 0;
 }
 
+int observable_untwisted_density_profile(void* pdata_, double* A, unsigned int n_A) {
+  unsigned int i;
+  int binx, biny, binz;
+  double ppos[3], untwisted_ppos[3];
+  int img[3];
+  IntList* ids;
+  profile_data* pdata;
+  sortPartCfg();
+  pdata=(profile_data*) pdata_;
+  ids=pdata->id_list;
+  double r, phi, phi_shift, phi_corrected, center_x, center_y, base_no;
+  double bin_volume=(pdata->maxx-pdata->minx)*(pdata->maxy-pdata->miny)*(pdata->maxz-pdata->minz)/pdata->xbins/pdata->ybins/pdata->zbins;
+  double pitch = 0.34;
+  double twist_per_bp = 36.;
+
+  center_x = .5*(pdata->maxx - pdata->minx);
+  center_y = .5*(pdata->maxy - pdata->miny);
+
+  if (pdata->zbins != 1)
+      return 1;
+    
+  for ( i = 0; i<n_A; i++ ) {
+    A[i]=0;
+  }
+  for ( i = 0; i<ids->n; i++ ) {
+    if (ids->e[i] >= n_total_particles)
+      return 1;
+/* We use folded coordinates here */
+    memcpy(ppos, partCfg[ids->e[i]].r.p, 3*sizeof(double));
+    memcpy(img, partCfg[ids->e[i]].l.i, 3*sizeof(int));
+    fold_position(ppos, img);
+
+    ppos[0] -= center_x;
+    ppos[1] -= center_y;
+
+    r = sqrt(ppos[0]*ppos[0]+ppos[1]*ppos[1]);
+    phi=acos(ppos[0]/r)/2./PI*360.;
+    if ( ppos[1] < 0 ) {
+       phi=360 - phi;
+    }
+    base_no = ppos[2]/pitch;
+    phi_shift = base_no * twist_per_bp;
+    phi_corrected = phi - phi_shift;
+    untwisted_ppos[0] = center_x + r * cos(phi_corrected*2*PI/360); 
+    untwisted_ppos[1] = center_y + r * sin(phi_corrected*2*PI/360); 
+
+    binx= (int) floor( pdata->xbins*  (untwisted_ppos[0]-pdata->minx)/(pdata->maxx-pdata->minx));
+    biny= (int) floor( pdata->ybins*  (untwisted_ppos[1]-pdata->miny)/(pdata->maxy-pdata->miny));
+    binz= 0;
+    if (binx>=0 && binx < pdata->xbins && biny>=0 && biny < pdata->ybins && binz>=0 && binz < pdata->zbins) {
+      A[binx*pdata->ybins*pdata->zbins + biny*pdata->zbins + binz] += 1./bin_volume;
+    } 
+  }
+  return 0;
+}
+
 #ifdef LB
 int observable_lb_velocity_profile(void* pdata_, double* A, unsigned int n_A) {
   unsigned int i, j, k;

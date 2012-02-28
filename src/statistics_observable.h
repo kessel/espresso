@@ -119,6 +119,7 @@ typedef struct {
 } profile_data;
 
 int observable_density_profile(void* params, double* A, unsigned int n_A);
+int observable_untwisted_density_profile(void* params, double* A, unsigned int n_A);
 
 int observable_lb_velocity_profile(void* params, double* A, unsigned int n_A);
 
