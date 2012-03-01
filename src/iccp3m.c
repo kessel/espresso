@@ -162,6 +162,10 @@ int iccp3m_iteration() {
             for(i=0 ; i < np; i++) {
                 id = part[i].p.identity ;
                 if( id < iccp3m_cfg.n_ic ) {
+                    if (part[i].p.q == 0) {
+                        	errtxt = runtime_error(128);
+                        	ERROR_SPRINTF(errtxt, "Zero Charge on ICC particle. This can not be fixed");
+                      }
            /* the dielectric-related prefactor: */                     
                       del_eps = (iccp3m_cfg.ein[id]-iccp3m_cfg.eout)/(iccp3m_cfg.ein[id] + iccp3m_cfg.eout)/6.283185307;
            /* calculate the electric field at the certain position */
@@ -174,7 +178,7 @@ int iccp3m_iteration() {
                       ey += iccp3m_cfg.exty; 
                       ez += iccp3m_cfg.extz;
                       
-                      if (ex == 0 && ey == 0 && ez == 0) {
+                      if ( ex == 0 && ey == 0 && ez == 0  ) {
                         	errtxt = runtime_error(128);
                         	ERROR_SPRINTF(errtxt, "ICCP3M found zero electric field on a charge. This must never happen");
                       }
@@ -206,7 +210,7 @@ int iccp3m_iteration() {
                       part[i].p.q = hnew * iccp3m_cfg.areas[id];
          /* check if the charge now is more than 1e6, to determine if ICC still leads to reasonable results */
          /* this is kind a arbitrary measure but, does a good job spotting divergence !*/
-                      if(fabs(part[i].p.q) > 1e6) { 
+                      if(fabs(part[i].p.q) > 1e6 || isnan(part[i].p.q)) { 
                         errtxt = runtime_error(128);
             	          ERROR_SPRINTF(errtxt, "{error occured 990 : too big charge assignment in iccp3m! q >1e6 , \
                                assigned charge= %f } \n",part[i].p.q);

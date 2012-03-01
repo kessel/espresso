@@ -722,7 +722,7 @@ proc dielectric_pore { args } {
       set py [ expr $circle_center_y + $radius*cos($phi)*$e_1_y + $radius*sin($phi)*$e_2_y ]
       set pz [ expr $circle_center_z + $radius*cos($phi)*$e_1_z + $radius*sin($phi)*$e_2_z ]
       if { $px > 0 && $px < $box_l_x && $py > 0 && $py < $box_l_y && $pz > 0 && $pz < $box_l_z } {  
-        part [ expr $n_induced_charges ] pos $px $py $pz type $type fix 1 1 1
+        part [ expr $n_induced_charges ] pos $px $py $pz type $type q [ expr $sigma*$res*$res +0.1*([ t_random ]-0.5) ]  fix 1 1 1
         set nx [ expr +$axis_x ]
         set ny [ expr +$axis_y ]
         set nz [ expr +$axis_z ]
