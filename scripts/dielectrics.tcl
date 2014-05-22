@@ -74,7 +74,7 @@ proc dielectric_wall { args } {
       incr argno
       continue
     }
-    error "did not understand arg [ lindex args $argno ]"
+    error "did not understand arg [ lindex $args $argno ]"
   }
   set box_l_x [ lindex [ setmd box_l ] 0 ]
   set box_l_y [ lindex [ setmd box_l ] 1 ]
@@ -204,7 +204,7 @@ proc dielectric_sphere { args } {
       incr argno
       continue
     }
-    error "did not understand arg [ lindex args $argno ]"
+    error "did not understand arg [ lindex $args $argno ]"
   }
   set pi 3.1415
   set n_half_equator [ expr round($pi * $radius/$res) ]
@@ -585,7 +585,7 @@ proc dielectric_pore { args } {
       incr argno
       continue
     }
-    error "did not understand arg [ lindex args $argno ]"
+    error "did not understand arg [ lindex $args $argno ]"
   }
   set pi 3.1415
   set particle_counter 0
@@ -864,8 +864,7 @@ proc dielectric_slitpore { args } {
       incr argno
       continue
     }
-    puts "did not understand arg [ lindex args $argno ]"
-    error "did not understand arg [ lindex args $argno ]"
+    error "did not understand arg [ lindex $args $argno ]"
   }
   set box_l_x [ lindex [ setmd box_l ] 0 ]
 
