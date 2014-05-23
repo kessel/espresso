@@ -98,7 +98,6 @@ proc dielectric_wall { args } {
     set e_1_y [ expr - $nz ]
     set e_1_z $ny
   }
-  puts "e_1 is $e_1_x $e_1_y $e_1_z"
 # and normalize
   set sq_sum [ expr sqrt($e_1_x*$e_1_x +  $e_1_y*$e_1_y + $e_1_z*$e_1_z) ] 
   set e_1_x [ expr $e_1_x/$sq_sum ]
