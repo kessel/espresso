@@ -27,6 +27,7 @@
 
 /* forward declarations */
 int tclcommand_observable_print_formatted(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs, double* values);
+int tclcommand_observable_write_vtk(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs, double* values, char* filename);
 int tclcommand_observable_print(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs);
 int tclcommand_observable_update(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs);
 
@@ -163,6 +164,55 @@ int tclcommand_observable_print_profile_formatted(Tcl_Interp* interp, int argc, 
       }
   return TCL_OK;
 //  Tcl_AppendResult(interp, "\n", (char *)NULL );
+}
+
+
+int tclcommand_observable_write_profile_vtk(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs, double* values, int groupsize, int shifted, char* filename) {
+  profile_data* pdata=(profile_data*) obs->container;
+  char buffer[TCL_DOUBLE_SPACE];
+  double data;
+  int linear_index;
+  double x_offset, y_offset, z_offset, x_incr, y_incr, z_incr;
+  if (shifted) {
+    x_incr = (pdata->maxx-pdata->minx)/(pdata->xbins);
+    y_incr = (pdata->maxy-pdata->miny)/(pdata->ybins);
+    z_incr = (pdata->maxz-pdata->minz)/(pdata->zbins);
+    x_offset = pdata->minx + 0.5*x_incr;
+    y_offset = pdata->miny + 0.5*y_incr;
+    z_offset = pdata->minz + 0.5*z_incr;
+  } else {
+    x_incr = (pdata->maxx-pdata->minx)/(pdata->xbins-1);
+    y_incr = (pdata->maxy-pdata->miny)/(pdata->ybins-1);
+    z_incr = (pdata->maxz-pdata->minz)/(pdata->zbins-1);
+    x_offset = pdata->minx;
+    y_offset = pdata->miny;
+    z_offset = pdata->minz;
+  }
+  
+  FILE* fp = fopen(filename, "w");
+
+  fprintf(fp, "# vtk DataFile Version 2.0\nlbfluid_gpu\n"
+            "ASCII\nDATASET STRUCTURED_POINTS\nDIMENSIONS %u %u %u\n"
+            "ORIGIN %f %f %f\nSPACING %f %f %f\nPOINT_DATA %u\n"
+            "SCALARS velocity float %d\nLOOKUP_TABLE default\n", 
+            pdata->xbins, pdata->ybins, pdata->zbins,
+            pdata->minx, pdata->miny, pdata->minz, 
+            x_incr, y_incr, z_incr,
+            pdata->xbins*pdata->ybins*pdata->zbins,  groupsize
+            );
+
+      for (int k = 0; k < pdata->zbins; k++) 
+    for (int j = 0; j < pdata->ybins; j++) 
+  for (int i = 0; i < pdata->xbins; i++) {
+        linear_index=i*pdata->ybins*pdata->zbins+j*pdata->zbins+k;
+        for (int l = 0; l<groupsize; l++) {
+          data=values[groupsize*linear_index+l];
+          fprintf(fp, "%f ", data);
+        }
+        fprintf(fp, "\n");
+      }
+  fclose(fp);
+  return TCL_OK;
 }
 
 int tclcommand_observable_print_radial_profile_formatted(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs, double* values, int groupsize, int shifted) {
@@ -1378,6 +1428,8 @@ int tclcommand_observable_print(Tcl_Interp* interp, int argc, char** argv, int* 
     }
   } else if (argc>0 && ARG0_IS_S("formatted")) {
     tclcommand_observable_print_formatted(interp, argc-1, argv+1, change, obs, obs->last_value);
+  } else if (argc>1 && ARG0_IS_S("write_vtk")) {
+    tclcommand_observable_write_vtk(interp, argc-1, argv+1, change, obs, obs->last_value, argv[1]);
   } else {
     Tcl_AppendResult(interp, "Unknown argument to observable print: ", argv[0], "\n", (char *)NULL );
     return TCL_ERROR;
@@ -1407,6 +1459,35 @@ int tclcommand_observable_print_formatted(Tcl_Interp* interp, int argc, char** a
     return tclcommand_observable_print_radial_profile_formatted(interp, argc, argv, change, obs, values, 3, 1);
   } else if (obs->calculate == (&observable_calc_flux_density_profile)) {
     return tclcommand_observable_print_profile_formatted(interp, argc, argv, change, obs, values, 3, 1);
+  } else { 
+    Tcl_AppendResult(interp, "Observable can not be printed formatted\n", (char *)NULL );
+    return TCL_ERROR;
+  }
+
+}
+
+int tclcommand_observable_write_vtk(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs, double* values, char* filename) {
+
+  if (obs->update == (&observable_update_average)) 
+      obs = ((observable_average_container*)obs->container)->reference_observable;
+
+  if (0) {
+#ifdef LB
+  } else if (obs->calculate == (&observable_calc_lb_velocity_profile)) {
+    return tclcommand_observable_write_profile_vtk(interp, argc, argv, change, obs, values, 3, 0, filename);
+#endif
+  } else if (obs->calculate == (&observable_calc_density_profile)) {
+    return tclcommand_observable_write_profile_vtk(interp, argc, argv, change, obs, values, 1, 1, filename);
+#ifdef LB
+  } else if (obs->calculate == (&observable_calc_lb_radial_velocity_profile)) {
+    return TCL_ERROR;// tclcommand_observable_print_radial_profile_formatted(interp, argc, argv, change, obs, values, 3, 0);
+#endif
+  } else if (obs->calculate == (&observable_calc_radial_density_profile)) {
+    return TCL_ERROR;//tclcommand_observable_print_radial_profile_formatted(interp, argc, argv, change, obs, values, 1, 1);
+  } else if (obs->calculate == (&observable_calc_radial_flux_density_profile)) {
+    return TCL_ERROR;//tclcommand_observable_print_radial_profile_formatted(interp, argc, argv, change, obs, values, 3, 1);
+  } else if (obs->calculate == (&observable_calc_flux_density_profile)) {
+    return tclcommand_observable_write_profile_vtk(interp, argc, argv, change, obs, values, 3, 1, filename);
   } else { 
     Tcl_AppendResult(interp, "Observable can not be printed formatted\n", (char *)NULL );
     return TCL_ERROR;
