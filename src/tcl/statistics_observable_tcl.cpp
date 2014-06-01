@@ -1418,7 +1418,7 @@ int tclcommand_parse_radial_profile(Tcl_Interp* interp, int argc, char** argv, i
 int tclcommand_observable_print(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
   char buffer[TCL_DOUBLE_SPACE];
   if ( observable_calculate(obs) ) {
-    Tcl_AppendResult(interp, "\nFailed to compute observable tclcommand\n", (char *)NULL );
+    Tcl_AppendResult(interp, "\nFailed to compute observable\n", (char *)NULL );
     return TCL_ERROR;
   }
   if (argc==0) {
