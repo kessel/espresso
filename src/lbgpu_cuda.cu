@@ -3602,6 +3602,71 @@ __device__ void get_interpolated_velocity(LB_nodes_gpu n_a, float* r, float* u, 
     u[i]*=para.agrid/para.tau;
   }
 }
+
+__global__ void fill_lb_velocity_profile(LB_nodes_gpu n_a, profile_data* pdata, float* data, LB_node_force_gpu node_f){
+
+  unsigned int xbin=threadIdx.x;
+  unsigned int ybin=blockIdx.x;
+  unsigned int zbin=blockIdx.y;
+
+  unsigned int maxi;
+  float xoffset, x_incr;
+  if ( pdata->xbins == 1 ) {
+    maxi = (int) para.dim_x;
+    xoffset=pdata->minx;
+    x_incr=para.agrid;
+  } else {
+    maxi = (int) pdata->xbins;
+    xoffset=pdata->minx;
+    x_incr=(pdata->maxx-pdata->minx)/(pdata->xbins-1);
+  }
+
+  unsigned int maxj;
+  float yoffset, y_incr;
+  if ( pdata->ybins == 1 ) {
+    maxj = (int) para.dim_y;
+    yoffset=pdata->miny;
+    y_incr=para.agrid;
+  } else {
+    maxj = (int) pdata->ybins;
+    yoffset=pdata->miny;
+    y_incr=(pdata->maxy-pdata->miny)/(pdata->ybins-1);
+  }
+
+  unsigned int maxk;
+  float zoffset, z_incr;
+  if ( pdata->zbins == 1 ) {
+    maxk = (int) para.dim_z;
+    zoffset=pdata->minz;
+    z_incr=para.agrid;
+  } else {
+    maxk = (int) pdata->zbins;
+    zoffset=pdata->minz;
+    z_incr=(pdata->maxz-pdata->minz)/(pdata->zbins-1);
+  }
+
+  float x = xoffset + xbin*x_incr;
+  float y = yoffset + ybin*y_incr;
+  float z = zoffset + zbin*z_incr;
+
+  float p[3];
+  p[0]=x;
+  p[1]=y;
+  p[2]=z;
+
+  float v[3];
+  get_interpolated_velocity(n_a, p, v, node_f, 0);
+  unsigned int linear_index = xbin*maxj*maxk + ybin*maxk + zbin;
+
+ float v_r,v_phi;
+
+  data[3*linear_index+0]=v[0];
+  data[3*linear_index+1]=v[1];
+  data[3*linear_index+2]=v[2];
+
+}
+
+
 __global__ void fill_lb_radial_velocity_profile(LB_nodes_gpu n_a, radial_profile_data* pdata, float* data, LB_node_force_gpu node_f){
 
   unsigned int rbin=threadIdx.x;
@@ -3743,4 +3808,82 @@ int statistics_observable_lbgpu_radial_velocity_profile(radial_profile_data* pda
   return 0;
 }
 
+int statistics_observable_lbgpu_velocity_profile(profile_data* pdata, double* A, unsigned int n_A){
+
+  unsigned int maxi,maxj, maxk;
+  float normalization_factor=1;
+  
+  if ( pdata->xbins == 1 ) {
+    maxi = (int) lbpar_gpu.dim_x; 
+    normalization_factor/=maxi;
+  } else {
+    maxi = pdata->xbins;
+  }
+  
+  if ( pdata->ybins == 1 ) {
+    maxj = (int) lbpar_gpu.dim_y;
+    normalization_factor/=maxj;
+  } else {
+    maxj = pdata->ybins;
+  }
+  if ( pdata->zbins == 1 ) {
+    maxk = (int) lbpar_gpu.dim_z;
+    normalization_factor/=maxk;
+  } else {
+    maxk = pdata->zbins;
+  }
+
+  for (int i = 0; i<n_A; i++) {
+    A[i]=0;
+  }
+
+  
+  // copy radial profile to device
+  profile_data* pdata_device;
+  cuda_safe_mem(cudaMalloc((void**)&pdata_device, sizeof(profile_data)));
+  cuda_safe_mem(cudaMemcpy(pdata_device, pdata,  sizeof(profile_data), cudaMemcpyHostToDevice));
+
+  // allocate data on device
+  float* data_device;
+  cuda_safe_mem(cudaMalloc((void**)&data_device, sizeof(float)*3*maxi*maxj*maxk));
+  // kernellcall
+  int threads_per_block = maxi;
+  int blocks_per_grid_x = maxj;
+  int blocks_per_grid_y = maxk;
+  dim3 dim_grid = make_uint3(blocks_per_grid_x, blocks_per_grid_y, 1);
+
+  KERNELCALL(fill_lb_velocity_profile, dim_grid, threads_per_block, (nodes_a, pdata_device, data_device, node_f ));
+  // allocate data on host
+  float* host_data;
+  host_data = (float*) malloc(sizeof(float)*3*maxi*maxj*maxk);
+
+  // copy data back
+  cuda_safe_mem(cudaMemcpy(host_data, data_device,  sizeof(float)*3*maxi*maxj*maxk, cudaMemcpyDeviceToHost));
+
+  // average (or store)
+  unsigned int linear_index;
+  for (int i =0; i<maxi; i++)
+    for (int j =0; j<maxj; j++)
+      for (int k =0; k<maxk; k++) {
+        linear_index = 0;
+        if (pdata->xbins > 1)
+          linear_index += i*pdata->ybins*pdata->zbins;
+        if (pdata->ybins > 1)
+          linear_index += j*pdata->zbins;
+        if (pdata->zbins > 1)
+          linear_index +=k;
+        A[3*linear_index+0]+=host_data[3*(i*maxj*maxk + j*maxk + k)+0]*normalization_factor;
+        A[3*linear_index+1]+=host_data[3*(i*maxj*maxk + j*maxk + k)+1]*normalization_factor;
+        A[3*linear_index+2]+=host_data[3*(i*maxj*maxk + j*maxk + k)+2]*normalization_factor;
+      }
+
+  // free device data
+  cudaFree(pdata_device);
+  cudaFree(data_device);
+
+  // free host data
+  free(host_data);
+
+  return 0;
+}
 #endif /* LB_GPU */
